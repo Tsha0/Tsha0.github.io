@@ -106,8 +106,8 @@
 (() => {
   const LINKS = [
     { name: 'github',   url: 'https://github.com/Tsha0',   box: [516, 193, 689, 358] },
-    { name: 'linkedin', url: 'https://www.linkedin.com/',  box: [1193, 523, 1310, 689] },
-    { name: 'x',        url: 'https://x.com/',             box: [111, 975, 248, 1126] },
+    { name: 'linkedin', url: 'https://www.linkedin.com/in/jason-shao-751686189/', box: [1193, 523, 1310, 689] },
+    { name: 'x',        url: 'https://x.com/jasonshao0218', box: [111, 975, 248, 1126] },
   ];
   const VIEW = { x: 60, y: 130, w: 1300, h: 1060 };
   const HIT_PAD = 18;
@@ -162,6 +162,7 @@
 
   function prep(ctx) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
     ctx.lineCap = ctx.lineJoin = 'round';
