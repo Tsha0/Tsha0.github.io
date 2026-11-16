@@ -1,39 +1,332 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Document</title>
-    <style>
-        html {
-            height: 100%;
-        }
-        body {
-            height: 100%;
-            background: linear-gradient(45deg, deepskyblue, white);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0b">
+<meta name="description" content="Jason Shao. A blackboard you can draw on.">
+<title>Jason Shao</title>
+<link rel="icon" href="data:,">
+<link rel="preload" as="image" href="chalk.png">
+<style>
+  :root {
+    --board: #0b0b0b;
+    --chalk: #f2f2ee;
+    --dim: rgba(242, 242, 238, .38);
+    --tray: 72px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body {
+    background: radial-gradient(120% 90% at 50% 40%, #151515 0%, var(--board) 60%, #070707 100%) var(--board);
+    color: var(--chalk);
+    font: 11px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    letter-spacing: .14em;
+    text-transform: lowercase;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+  #stage { position: fixed; inset: 0; touch-action: none; transition: opacity .18s ease; }
+  #stage.wipe { opacity: 0; }
+  #stage canvas, #grain { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #grain { pointer-events: none; background-size: 220px 220px; }
+
+  nav a {
+    position: fixed; pointer-events: none;
+    display: flex; align-items: flex-end; justify-content: center;
+    color: var(--chalk); text-decoration: none; white-space: nowrap;
+    border-radius: 6px; outline-offset: 4px;
+  }
+  nav a span { transform: translateY(18px); opacity: 0; transition: opacity .15s ease; }
+  nav a.hover span, nav a:focus-visible span { opacity: .7; }
+  nav a:focus-visible { outline: 1px dashed var(--dim); }
+  nav a.gone { visibility: hidden; }
+
+  #tools {
+    position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 2px;
+  }
+  #tools button {
+    appearance: none; background: none; border: 0; padding: 0;
+    width: 34px; height: 34px; display: grid; place-items: center;
+    color: var(--dim); font: inherit; letter-spacing: inherit; text-transform: inherit;
+    cursor: inherit; border-radius: 50%; transition: color .15s ease;
+  }
+  #tools button:hover, #tools button[aria-pressed="true"] { color: var(--chalk); }
+  #tools button:focus-visible { outline: 1px dashed var(--dim); outline-offset: -2px; }
+  #tools .chalk i {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--c);
+    opacity: .55; transition: opacity .15s ease, box-shadow .15s ease;
+  }
+  #tools .chalk:hover i { opacity: 1; }
+  #tools .chalk[aria-pressed="true"] i { opacity: 1; box-shadow: 0 0 0 3px var(--board), 0 0 0 4px var(--chalk); }
+  #tools hr { width: 1px; height: 14px; border: 0; background: var(--dim); opacity: .5; margin: 0 10px; }
+  #tools #reset { width: auto; padding: 0 10px; border-radius: 17px; }
+
+  #hint {
+    position: fixed; left: 0; right: 0; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 46px);
+    text-align: center; color: var(--dim); pointer-events: none;
+    transition: opacity .6s ease;
+  }
+  #hint.off { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
 </head>
 <body>
-    <h1>Today is my first day to learn game (core Javascript, Canvas)</h1>
-    
-    <ul>
-        <li>HTML, CSS</li>
-        <li>Python</li>
-        <li>Javascript</li>
-        <li>Java</li>
-        <li>C++, C</li>
-        <li>SQL</li>
-        <li>Elixir</li>
-        <li>传智播客</li>
-    </ul>
-    
-    <ul>
-        <li>cd ~/_a/Jason-0218.github.io</li>
-        <li>git add -A</li>
-        <li>git commit -m "message"</li>
-        <li>git push</li>
-        <li>phaser.io</li>
-        <li>python in 1 hour</li>
-    </ul>
+<h1 class="sr">Jason Shao</h1>
+
+<div id="stage">
+  <canvas id="art" aria-hidden="true"></canvas>
+  <canvas id="ink" aria-label="Blackboard. Draw anywhere."></canvas>
+  <div id="grain"></div>
+</div>
+
+<nav aria-label="Links"></nav>
+
+<p id="hint">draw anywhere · tap an icon to visit</p>
+
+<div id="tools" role="toolbar" aria-label="Drawing tools">
+  <button class="chalk" style="--c:#f2f2ee" data-color="#f2f2ee" aria-label="White chalk" aria-pressed="true"><i></i></button>
+  <button class="chalk" style="--c:#f1dc8b" data-color="#f1dc8b" aria-label="Yellow chalk" aria-pressed="false"><i></i></button>
+  <button class="chalk" style="--c:#f0a9b6" data-color="#f0a9b6" aria-label="Pink chalk" aria-pressed="false"><i></i></button>
+  <button class="chalk" style="--c:#9fc8ec" data-color="#9fc8ec" aria-label="Blue chalk" aria-pressed="false"><i></i></button>
+  <button class="chalk" style="--c:#a9d8a6" data-color="#a9d8a6" aria-label="Green chalk" aria-pressed="false"><i></i></button>
+  <hr>
+  <button id="eraser" aria-label="Eraser" aria-pressed="false">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M6.2 14.5 2.6 10.9a1 1 0 0 1 0-1.4l6.6-6.6a1 1 0 0 1 1.4 0l4.8 4.8a1 1 0 0 1 0 1.4l-5.4 5.4zM6.4 5.7l5.9 5.9M5 14.5h10.5"/></svg>
+  </button>
+  <hr>
+  <button id="reset">reset</button>
+</div>
+
+<script>
+(() => {
+  const LINKS = [
+    { name: 'github',   url: 'https://github.com/Tsha0',   box: [516, 193, 689, 358] },
+    { name: 'linkedin', url: 'https://www.linkedin.com/',  box: [1193, 523, 1310, 689] },
+    { name: 'x',        url: 'https://x.com/',             box: [111, 975, 248, 1126] },
+  ];
+  const VIEW = { x: 60, y: 130, w: 1300, h: 1060 };
+  const HIT_PAD = 18;
+  const ALIVE = 0.5;
+
+  const $ = s => document.querySelector(s);
+  const stage = $('#stage'), artC = $('#art'), inkC = $('#ink');
+  const art = artC.getContext('2d', { willReadFrequently: true }), ink = inkC.getContext('2d');
+  const nav = $('nav'), hint = $('#hint'), eraserBtn = $('#eraser');
+  const chalks = [...document.querySelectorAll('.chalk')];
+
+  let scale = 1, ox = 0, oy = 0, dpr = 1;
+  let ops = [], color = '#f2f2ee', erasing = false;
+  let stroke = null, down = null;
+
+  for (const l of LINKS) {
+    const a = document.createElement('a');
+    a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = `<span>${l.name} ↗</span>`;
+    a.setAttribute('aria-label', l.name);
+    nav.append(a);
+    l.el = a; l.alive = true;
+  }
+
+  const img = new Image();
+  img.src = 'chalk.png';
+
+  function grain() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 220;
+    const g = c.getContext('2d'), d = g.createImageData(220, 220);
+    for (let i = 3; i < d.data.length; i += 4) d.data[i] = Math.random() ** 2 * 150;
+    g.putImageData(d, 0, 0);
+    $('#grain').style.backgroundImage = `url(${c.toDataURL()})`;
+  }
+
+  function layout() {
+    const W = innerWidth, H = innerHeight, tray = 72;
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    scale = Math.min((W - 24) / VIEW.w, (H - tray - 24) / VIEW.h);
+    ox = (W - VIEW.w * scale) / 2 - VIEW.x * scale;
+    oy = (H - tray - VIEW.h * scale) / 2 - VIEW.y * scale;
+    for (const c of [artC, inkC]) { c.width = W * dpr; c.height = H * dpr; }
+    for (const l of LINKS) {
+      const [x0, y0, x1, y1] = l.box, s = l.el.style;
+      s.left = ox + x0 * scale + 'px'; s.top = oy + y0 * scale + 'px';
+      s.width = (x1 - x0) * scale + 'px'; s.height = (y1 - y0) * scale + 'px';
+    }
+    redraw();
+    setCursor();
+  }
+
+  function prep(ctx) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
+    ctx.lineCap = ctx.lineJoin = 'round';
+  }
+
+  function style(ctx, op) {
+    ctx.globalCompositeOperation = op.erase ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = ctx.fillStyle = op.erase ? '#000' : op.color;
+    ctx.lineWidth = op.width;
+  }
+
+  function targets(op) { return op.erase ? [art, ink] : [ink]; }
+
+  function paint(op) {
+    const p = op.pts;
+    for (const ctx of targets(op)) {
+      style(ctx, op);
+      ctx.beginPath();
+      if (p.length === 1) {
+        ctx.arc(p[0][0], p[0][1], op.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
+      ctx.moveTo(p[0][0], p[0][1]);
+      for (let i = 1; i < p.length; i++) {
+        ctx.quadraticCurveTo(p[i - 1][0], p[i - 1][1], (p[i - 1][0] + p[i][0]) / 2, (p[i - 1][1] + p[i][1]) / 2);
+      }
+      ctx.lineTo(p[p.length - 1][0], p[p.length - 1][1]);
+      ctx.stroke();
+    }
+  }
+
+  function extend(op, x, y) {
+    const p = op.pts, a = p[p.length - 1];
+    const from = p.length > 1 ? [(p[p.length - 2][0] + a[0]) / 2, (p[p.length - 2][1] + a[1]) / 2] : a;
+    p.push([x, y]);
+    for (const ctx of targets(op)) {
+      style(ctx, op);
+      ctx.beginPath();
+      ctx.moveTo(from[0], from[1]);
+      ctx.quadraticCurveTo(a[0], a[1], (a[0] + x) / 2, (a[1] + y) / 2);
+      ctx.stroke();
+    }
+  }
+
+  function measure(l) {
+    const [x0, y0, x1, y1] = l.box;
+    const d = art.getImageData(
+      Math.floor((ox + x0 * scale) * dpr), Math.floor((oy + y0 * scale) * dpr),
+      Math.ceil((x1 - x0) * scale * dpr), Math.ceil((y1 - y0) * scale * dpr)).data;
+    let sum = 0;
+    for (let i = 3; i < d.length; i += 4) sum += d[i];
+    return sum;
+  }
+
+  function checkLinks() {
+    for (const l of LINKS) {
+      const alive = measure(l) >= l.full * ALIVE;
+      if (alive === l.alive) continue;
+      l.alive = alive;
+      l.el.classList.toggle('gone', !alive);
+      l.el.classList.remove('hover');
+    }
+  }
+
+  function redraw() {
+    prep(art); prep(ink);
+    art.drawImage(img, 0, 0);
+    for (const l of LINKS) l.full = measure(l);
+    ops.forEach(paint);
+    checkLinks();
+  }
+
+  function setCursor() {
+    let svg, hot;
+    if (erasing) {
+      const s = Math.round(Math.min(eraserWidth() * scale, 110)) + 4, r = s / 2;
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><circle cx="${r}" cy="${r}" r="${r - 2}" fill="rgba(255,255,255,.06)" stroke="#000" stroke-width="3"/><circle cx="${r}" cy="${r}" r="${r - 2}" fill="none" stroke="#fff" stroke-width="1.2"/></svg>`;
+      hot = `${r} ${r}`;
+    } else {
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path d="M3 29l2.2-7.4L21.6 5.2a2.6 2.6 0 0 1 3.7 0l1.5 1.5a2.6 2.6 0 0 1 0 3.7L10.4 26.8z" fill="${color}" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/><path d="M5.2 21.6l5.2 5.2M19.4 7.4l5.2 5.2" stroke="#000" stroke-width="1.2"/></svg>`;
+      hot = '3 29';
+    }
+    document.body.style.cursor = `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hot}, crosshair`;
+  }
+
+  const penWidth = () => Math.max(7, 2.5 / scale);
+  const eraserWidth = () => Math.max(56, 24 / scale);
+  const toArt = e => [(e.clientX - ox) / scale, (e.clientY - oy) / scale];
+
+  function linkAt(x, y) {
+    return LINKS.find(l => l.alive &&
+      x >= l.box[0] - HIT_PAD && x <= l.box[2] + HIT_PAD &&
+      y >= l.box[1] - HIT_PAD && y <= l.box[3] + HIT_PAD);
+  }
+
+  function begin(x, y) {
+    stroke = { erase: erasing, color, width: erasing ? eraserWidth() : penWidth(), pts: [[x, y]] };
+    ops.push(stroke);
+    hint.classList.add('off');
+  }
+
+  stage.addEventListener('pointerdown', e => {
+    if (down || e.button !== 0) return;
+    stage.setPointerCapture(e.pointerId);
+    down = { id: e.pointerId, cx: e.clientX, cy: e.clientY, at: toArt(e) };
+    for (const l of LINKS) l.el.classList.remove('hover');
+  });
+
+  stage.addEventListener('pointermove', e => {
+    if (!down) {
+      const hit = e.pointerType === 'mouse' && linkAt(...toArt(e));
+      for (const l of LINKS) l.el.classList.toggle('hover', l === hit);
+      return;
+    }
+    if (e.pointerId !== down.id) return;
+    if (!stroke) {
+      if (Math.hypot(e.clientX - down.cx, e.clientY - down.cy) < 4) return;
+      begin(...down.at);
+    }
+    for (const ev of (e.getCoalescedEvents?.() ?? [e])) extend(stroke, ...toArt(ev));
+  });
+
+  function end(e) {
+    if (!down || e.pointerId !== down.id) return;
+    const tap = !stroke, at = down.at;
+    down = null;
+    if (tap) {
+      const hit = e.type === 'pointerup' && linkAt(...at);
+      if (hit) { window.open(hit.url, '_blank', 'noopener'); return; }
+      if (e.type !== 'pointerup') return;
+      begin(...at);
+      paint(stroke);
+    } else {
+      const p = stroke.pts, a = p[p.length - 1];
+      extend(stroke, a[0], a[1]);
+    }
+    if (stroke.erase) checkLinks();
+    stroke = null;
+  }
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  stage.addEventListener('pointerleave', () => { for (const l of LINKS) l.el.classList.remove('hover'); });
+
+  function pick() {
+    for (const b of chalks) b.setAttribute('aria-pressed', !erasing && b.dataset.color === color);
+    eraserBtn.setAttribute('aria-pressed', erasing);
+    setCursor();
+  }
+  for (const b of chalks) b.addEventListener('click', () => { color = b.dataset.color; erasing = false; pick(); });
+  eraserBtn.addEventListener('click', () => { erasing = !erasing; pick(); });
+
+  $('#reset').addEventListener('click', () => {
+    stage.classList.add('wipe');
+    setTimeout(() => {
+      ops = [];
+      redraw();
+      stage.classList.remove('wipe');
+    }, 190);
+  });
+
+  addEventListener('resize', layout);
+  grain();
+  img.decode().then(layout);
+})();
+</script>
 </body>
 </html>
